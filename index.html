@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rollup Lab — how Arbitrum scales Ethereum</title>
+<meta name="description" content="A hands-on field guide to Ethereum Layer 2: what rollups do, why Arbitrum exists, live crypto prices, and a working proof-of-work block simulator." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/site.css" />
+</head>
+<body>
+
+<!-- ============ Shared navigation (identical on all four pages) ============ -->
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
+    </a>
+    <nav class="nav__links" aria-label="Main">
+      <a class="nav__link is-active" href="index.html" aria-current="page">Home</a>
+      <a class="nav__link" href="concepts.html">Concepts</a>
+      <a class="nav__link" href="prices.html">Live Prices</a>
+      <a class="nav__link" href="simulator.html">Block Simulator</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ Hero: the signature element is a live rollup batcher ============ -->
+  <section class="hero">
+    <div class="wrap hero__grid">
+      <div>
+        <span class="eyebrow">Ethereum / Layer 2 / Arbitrum</span>
+        <h1>Ethereum runs out of room.<br /><span>Rollups make more.</span></h1>
+        <p class="lede">
+          Arbitrum executes transactions off Ethereum, compresses them into batches, and posts the
+          result back to mainnet for settlement. You keep Ethereum's security and stop paying
+          Ethereum's congestion. This site takes that idea apart piece by piece — and lets you mine
+          your own blocks to see why a chain can't be quietly rewritten.
+        </p>
+        <div class="hero__actions">
+          <a class="btn" href="simulator.html">Mine a block</a>
+          <a class="btn btn--ghost" href="concepts.html">Start with the concepts</a>
+        </div>
+      </div>
+
+      <!-- Animated batcher: L2 transactions stream in, get batched, and settle on L1 -->
+      <div class="batcher">
+        <canvas id="batcher" width="520" height="320" role="img"
+                aria-label="Animation: individual Layer 2 transactions stream into a batcher, which compresses them into a single batch posted to the Ethereum Layer 1 rail."></canvas>
+        <div class="batcher__readout">
+          <span>L2 TXS SEQUENCED <b id="txCount">0</b></span>
+          <span>L1 BATCHES POSTED <b id="batchCount">0</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Required section: why L2, what Arbitrum is, one real benefit ============ -->
+  <section class="section" id="why-l2">
+    <div class="wrap">
+      <div class="section__head">
+        <span class="eyebrow">The case for Layer 2</span>
+        <h2>Three moves that took Ethereum from congested to affordable</h2>
+        <p class="lede">Read these in order — each one only makes sense because of the one before it.</p>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <div>
+            <h3>Why Ethereum needed Layer 2</h3>
+            <p>
+              Every Ethereum node re-executes and stores every transaction. That redundancy is exactly
+              what makes the chain trustworthy, and it is also a hard ceiling on throughput: block space
+              is scarce and sold by auction. When demand spikes — an NFT mint, a market crash — the
+              auction price of gas spikes with it, and a simple token swap can cost more than the thing
+              being swapped. Ethereum could raise the ceiling by demanding bigger, more expensive nodes,
+              but that pushes ordinary people out of running one and centralises the network. Layer 2 is
+              the other way out: move execution off-chain, keep verification on-chain.
+            </p>
+          </div>
+        </article>
+
+        <article class="step">
+          <div>
+            <h3>What Arbitrum is and how it helps</h3>
+            <p>
+              Arbitrum One is an optimistic rollup. It runs its own EVM-compatible execution
+              environment where transactions are cheap and fast, then compresses batches of them and
+              posts the data back to Ethereum. "Optimistic" means the batch is assumed correct by
+              default; anyone watching can challenge it during a dispute window, and Arbitrum's
+              interactive fraud proof narrows the disagreement down to a single instruction that
+              Ethereum itself can adjudicate. So the honest party wins as long as at least one honest
+              party is watching — Arbitrum inherits Ethereum's security rather than inventing its own
+              validator set.
+            </p>
+          </div>
+        </article>
+
+        <article class="step">
+          <div>
+            <h3>One real-world benefit over mainnet</h3>
+            <p>
+              Cost per transaction. Because hundreds of user transactions share the cost of one
+              compressed posting to Ethereum, a transfer or swap on Arbitrum typically costs a small
+              fraction of the same action on mainnet — and since EIP-4844 gave rollups a cheaper data
+              lane (blobs), that gap widened again. Concretely: a payment that isn't worth making at a
+              few dollars of mainnet gas becomes worth making at a few cents. That is the difference
+              between a chain used for settlement and a chain people can actually use.
+            </p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Features / benefits (3 points with icons) ============ -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section__head">
+        <span class="eyebrow eyebrow--muted">What makes it work</span>
+        <h2>Three properties worth understanding</h2>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="2" y="7" width="8" height="10" rx="1" /><rect x="14" y="7" width="8" height="10" rx="1" />
+              <path d="M10 12h4" /><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+          </div>
+          <h3>Data goes back to Ethereum</h3>
+          <p>
+            A rollup doesn't ask you to trust it. The transaction data needed to rebuild L2 state is
+            published to Ethereum, so anyone can reconstruct the chain and check it independently.
+            Availability of that data is what separates a rollup from a sidechain.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M12 2.6 20.5 6v6c0 5-3.6 8.2-8.5 9.4C7.1 20.2 3.5 17 3.5 12V6Z" />
+              <path d="m8.6 12.2 2.4 2.4 4.4-4.6" />
+            </svg>
+          </div>
+          <h3>Fraud proofs, not blind trust</h3>
+          <p>
+            Batches are posted optimistically and can be challenged during the dispute window. Arbitrum
+            runs an interactive, multi-round bisection game that isolates the exact disputed step, so
+            Ethereum only has to verify one tiny instruction instead of re-running everything.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+              <path d="M9 9h6M9 12.5h6M9 16h3.5" />
+            </svg>
+          </div>
+          <h3>The same tools you already know</h3>
+          <p>
+            Arbitrum's Nitro stack targets EVM equivalence, so Solidity contracts, MetaMask, Hardhat,
+            Foundry and existing tooling work with minimal changes. Cheap block space is only useful if
+            developers can actually reach it.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Where to go next ============ -->
+  <section class="section" id="tour">
+    <div class="wrap">
+      <div class="section__head">
+        <span class="eyebrow eyebrow--muted">The rest of the site</span>
+        <h2>Three more pages, one idea each</h2>
+      </div>
+      <div class="grid grid--3">
+        <a class="card" href="concepts.html">
+          <h3>Concepts →</h3>
+          <p>Web2 vs Web3, Ethereum vs Bitcoin, public vs private keys, and blockchains vs databases — as side-by-side comparisons.</p>
+        </a>
+        <a class="card" href="prices.html">
+          <h3>Live Prices →</h3>
+          <p>Real ETH, BTC and ARB prices pulled from the CoinGecko API, with 24-hour movement, 7-day sparklines and on-demand refresh.</p>
+        </a>
+        <a class="card" href="simulator.html">
+          <h3>Block Simulator →</h3>
+          <p>Mine real SHA-256 blocks in the browser, then edit an early block and watch every block after it break.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ Shared footer ============ -->
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <div class="footer__meta">
+      <b>Tanmay</b><br />
+      Arbitrum Builder Pods — Batch: <b>REPLACE_WITH_YOUR_BATCH_NAME</b><br />
+      Built for the Lampros DAO assignment, 2026
+    </div>
+    <div class="footer__links">
+      <a href="https://github.com/REPLACE_WITH_YOUR_USERNAME" target="_blank" rel="noopener">GitHub</a>
+      <a href="concepts.html">Concepts</a>
+      <a href="prices.html">Live Prices</a>
+      <a href="simulator.html">Block Simulator</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/batcher.js"></script>
+</body>
+</html>
