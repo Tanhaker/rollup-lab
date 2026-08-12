@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concepts — Rollup Lab</title>
+<meta name="description" content="Side-by-side comparisons of Web2 vs Web3, Ethereum vs Bitcoin, public vs private keys, and blockchains vs traditional databases." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/site.css" />
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
+    </a>
+    <nav class="nav__links" aria-label="Main">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link is-active" href="concepts.html" aria-current="page">Concepts</a>
+      <a class="nav__link" href="prices.html">Live Prices</a>
+      <a class="nav__link" href="simulator.html">Block Simulator</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Reference</span>
+      <h1>Four comparisons that do most of the work</h1>
+      <p class="lede">
+        Nearly every confusing Web3 conversation traces back to one of these four distinctions. Each
+        card puts both sides next to each other, then says what actually follows from the difference.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap grid" style="gap:22px;">
+
+      <!-- 1 -->
+      <article class="compare">
+        <div class="compare__head">
+          <h3>Web2 vs Web3</h3>
+          <span class="compare__tag">Who holds the data</span>
+        </div>
+        <div class="compare__body">
+          <div class="compare__side">
+            <h4>Web2</h4>
+            <ul>
+              <li>Your account lives on a company's servers, and the company decides what it means.</li>
+              <li>Login is a username and password the platform can reset, suspend, or delete.</li>
+              <li>Apps are fast and cheap because one operator controls the whole stack.</li>
+              <li>Rules can change overnight — an API you built on can close without warning.</li>
+            </ul>
+          </div>
+          <div class="compare__side compare__side--b">
+            <h4>Web3</h4>
+            <ul>
+              <li>Your balances and ownership live on a shared ledger no single company controls.</li>
+              <li>Login is a keypair you hold; nobody can reset it, including you.</li>
+              <li>Apps are slower and costlier because thousands of machines verify the same work.</li>
+              <li>Rules are contract code — public, permanent, and hard to change unilaterally.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="compare__note">
+          <b>What follows:</b> Web3 buys you credible neutrality and pays for it in speed, cost, and
+          responsibility. That trade is worth it when the thing at stake is ownership or money — and
+          usually isn't for a blog or a photo feed.
+        </p>
+      </article>
+
+      <!-- 2 -->
+      <article class="compare">
+        <div class="compare__head">
+          <h3>Ethereum vs Bitcoin</h3>
+          <span class="compare__tag">What the chain is for</span>
+        </div>
+        <div class="compare__body">
+          <div class="compare__side">
+            <h4>Bitcoin</h4>
+            <ul>
+              <li>Built to be sound money: move and store value, resist change.</li>
+              <li>Deliberately limited scripting — fewer features, fewer ways to break.</li>
+              <li>Proof-of-work: security comes from spent electricity and hash power.</li>
+              <li>Fixed supply cap of 21 million BTC, with issuance halving on schedule.</li>
+            </ul>
+          </div>
+          <div class="compare__side compare__side--b">
+            <h4>Ethereum</h4>
+            <ul>
+              <li>Built to be a programmable settlement layer: run applications, not just payments.</li>
+              <li>Turing-complete smart contracts in the EVM — lending, DEXs, NFTs, rollups.</li>
+              <li>Proof-of-stake since The Merge: security comes from staked ETH that can be slashed.</li>
+              <li>No fixed cap; issuance is low and a portion of fees is burned under EIP-1559.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="compare__note">
+          <b>What follows:</b> Bitcoin optimises for not changing; Ethereum optimises for what you can
+          build. Arbitrum only makes sense on a chain of the second kind — a rollup needs a
+          programmable base layer to verify its proofs.
+        </p>
+      </article>
+
+      <!-- 3 -->
+      <article class="compare">
+        <div class="compare__head">
+          <h3>Public key vs private key</h3>
+          <span class="compare__tag">How ownership is proven</span>
+        </div>
+        <div class="compare__body">
+          <div class="compare__side">
+            <h4>Public key</h4>
+            <ul>
+              <li>Derived from the private key, and your address is derived from it in turn.</li>
+              <li>Safe to share — it is how people send you funds and how anyone identifies you on-chain.</li>
+              <li>Used by the network to <em>verify</em> that a signature really came from you.</li>
+              <li>Reveals your entire transaction history, since the ledger is public.</li>
+            </ul>
+          </div>
+          <div class="compare__side compare__side--b">
+            <h4>Private key</h4>
+            <ul>
+              <li>A secret number generated first; everything else is computed from it.</li>
+              <li>Never shared. Whoever holds it owns the funds — there is no appeal above it.</li>
+              <li>Used to <em>sign</em> transactions, proving authorisation without exposing the key.</li>
+              <li>Cannot be recovered if lost, and cannot be revoked if stolen.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="compare__note">
+          <b>What follows:</b> The maths runs one way only — public from private, never the reverse.
+          That asymmetry is the whole security model, which is why a seed phrase in a screenshot is the
+          most common way people lose everything.
+        </p>
+      </article>
+
+      <!-- 4 -->
+      <article class="compare">
+        <div class="compare__head">
+          <h3>Blockchain vs traditional database</h3>
+          <span class="compare__tag">Who can rewrite history</span>
+        </div>
+        <div class="compare__body">
+          <div class="compare__side">
+            <h4>Traditional database</h4>
+            <ul>
+              <li>An administrator can UPDATE or DELETE any row, and often nobody outside would know.</li>
+              <li>One owner, one source of truth, trusted because of the institution behind it.</li>
+              <li>Extremely fast and cheap — millions of writes a second is ordinary.</li>
+              <li>Optimised for correct, current state. History is a backup, not a guarantee.</li>
+            </ul>
+          </div>
+          <div class="compare__side compare__side--b">
+            <h4>Blockchain</h4>
+            <ul>
+              <li>Append-only. Each block commits to the hash of the one before it, so edits cascade.</li>
+              <li>Replicated across many independent nodes that must agree on the same history.</li>
+              <li>Slow and expensive by design — redundancy is the product, not the overhead.</li>
+              <li>Optimised for verifiable history. Anyone can re-check every state change from genesis.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="compare__note">
+          <b>What follows:</b> Use a blockchain only when the cost of someone silently editing the
+          record is higher than the cost of the redundancy. See it happen on the
+          <a href="simulator.html">Block Simulator</a> — change one block's data and every block after
+          it turns invalid.
+        </p>
+      </article>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <div class="footer__meta">
+      <b>Tanmay</b><br />
+      Arbitrum Builder Pods — Batch: <b>REPLACE_WITH_YOUR_BATCH_NAME</b><br />
+      Built for the Lampros DAO assignment, 2026
+    </div>
+    <div class="footer__links">
+      <a href="https://github.com/REPLACE_WITH_YOUR_USERNAME" target="_blank" rel="noopener">GitHub</a>
+      <a href="index.html">Home</a>
+      <a href="prices.html">Live Prices</a>
+      <a href="simulator.html">Block Simulator</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
