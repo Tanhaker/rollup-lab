@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Block Simulator — Rollup Lab</title>
+<meta name="description" content="Mine real SHA-256 blocks in the browser, then edit an earlier block and watch the rest of the chain break." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/site.css" />
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
+    </a>
+    <nav class="nav__links" aria-label="Main">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="concepts.html">Concepts</a>
+      <a class="nav__link" href="prices.html">Live Prices</a>
+      <a class="nav__link is-active" href="simulator.html" aria-current="page">Block Simulator</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Proof of work / SHA-256</span>
+      <h1>Break a chain on purpose</h1>
+      <p class="lede">
+        Every block hashes its own data together with the hash of the block before it. Mine all three
+        blocks, then go back and change the data in Block 1. Blocks 2 and 3 turn red instantly — you
+        didn't touch them, but their inputs changed. That cascade is what people mean by immutability.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:30px;">
+    <div class="wrap">
+
+      <div class="toolbar">
+        <button class="btn" id="mineAllBtn" type="button">Mine whole chain</button>
+        <button class="btn btn--ghost btn--sm" id="resetBtn" type="button">Reset chain</button>
+        <label class="toolbar__status" for="difficulty" style="margin-left:6px;">DIFFICULTY</label>
+        <select class="field" id="difficulty" aria-label="Difficulty: number of leading zeros required">
+          <option value="2" selected>00 — 2 zeros</option>
+          <option value="3">000 — 3 zeros</option>
+          <option value="4">0000 — 4 zeros</option>
+        </select>
+        <span class="toolbar__status" id="engineNote"></span>
+      </div>
+
+      <div class="chain" id="chain"></div>
+
+      <div class="card" style="margin-top:26px;">
+        <h3>What you just did</h3>
+        <p>
+          Mining means brute-forcing the nonce until the block's SHA-256 hash starts with the required
+          number of zeros. There is no shortcut — you try, you check, you try again. Raising the
+          difficulty by one zero multiplies the expected work by 16, which is why the counter jumps so
+          hard between settings. Rewriting history means redoing that work for the tampered block
+          <em>and</em> every block after it, faster than the rest of the network extends the honest
+          chain. On a real network that is economically hopeless, and that is the entire security
+          argument.
+        </p>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <div class="footer__meta">
+      <b>Tanmay</b><br />
+      Arbitrum Builder Pods — Batch: <b>REPLACE_WITH_YOUR_BATCH_NAME</b><br />
+      Built for the Lampros DAO assignment, 2026
+    </div>
+    <div class="footer__links">
+      <a href="https://github.com/REPLACE_WITH_YOUR_USERNAME" target="_blank" rel="noopener">GitHub</a>
+      <a href="index.html">Home</a>
+      <a href="concepts.html">Concepts</a>
+      <a href="prices.html">Live Prices</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/simulator.js"></script>
+</body>
+</html>
