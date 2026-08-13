@@ -235,11 +235,20 @@
 
   /* ---------- data fetching ---------- */
 
+  // Errors carry the HTTP status so the caller can tell "this endpoint is
+  // broken" (worth falling back) from "you are rate-limited" (falling back to
+  // a second call on the same rate-limited host is pointless and makes it worse).
+  function httpError(label, status) {
+    const err = new Error(label + ' ' + status);
+    err.status = status;
+    return err;
+  }
+
   async function fetchMarkets(ids) {
     const url = API + '/coins/markets?vs_currency=' + currency + '&ids=' + ids.join(',') +
                 '&sparkline=true&price_change_percentage=24h';
     const res = await fetch(url);
-    if (!res.ok) throw new Error('markets ' + res.status);
+    if (!res.ok) throw httpError('markets', res.status);
     const data = await res.json();
 
     return data.map(c => ({
@@ -260,7 +269,7 @@
     const url = API + '/simple/price?ids=' + ids.join(',') +
                 '&vs_currencies=' + currency + '&include_24hr_change=true&include_market_cap=true';
     const res = await fetch(url);
-    if (!res.ok) throw new Error('simple ' + res.status);
+    if (!res.ok) throw httpError('simple', res.status);
     const data = await res.json();
 
     return ids.filter(id => data[id]).map(id => ({
@@ -276,11 +285,28 @@
     }));
   }
 
+  // Draw placeholder cards while a fetch is in flight, so a refresh reads as
+  // "working" instead of the board sitting there looking stale or empty.
+  function showSkeletons(count) {
+    let html = '';
+    for (let i = 0; i < count; i++) html += '<div class="skeleton"></div>';
+    grid.innerHTML = html;
+  }
+
+  let cooldownTimer = null;
+
   async function loadPrices(force) {
     const now = Date.now();
     if (!force && now - lastFetchAt < REFRESH_COOLDOWN_MS) {
       const wait = Math.ceil((REFRESH_COOLDOWN_MS - (now - lastFetchAt)) / 1000);
+      const previous = statusEl.textContent;
       statusEl.textContent = 'Wait ' + wait + 's before refreshing again';
+      // Put the real status back afterwards rather than leaving a stale
+      // instruction on screen forever.
+      clearTimeout(cooldownTimer);
+      cooldownTimer = setTimeout(function () {
+        statusEl.textContent = previous;
+      }, wait * 1000);
       return;
     }
 
@@ -295,12 +321,22 @@
     grid.setAttribute('aria-busy', 'true');
     statusEl.textContent = 'Fetching…';
 
+    // Only show skeletons on a cold load. Replacing a populated board with
+    // grey boxes on every 60s auto-refresh would be worse than leaving the
+    // previous numbers up for the second the request takes.
+    if (!grid.querySelector('.coin')) showSkeletons(trackedIds.length || 4);
+
     try {
       let coins;
       try {
         coins = await fetchMarkets(trackedIds);
       } catch (primaryError) {
-        // Keep the page useful even if the richer endpoint is unavailable.
+        // A 429 is the whole host rate-limiting us, so the fallback endpoint
+        // would fail the same way — and burn another request doing it.
+        if (primaryError.status === 429) throw primaryError;
+
+        // Any other failure is specific to the richer endpoint, so the simpler
+        // one is worth a try. The page stays useful, just without sparklines.
         coins = await fetchSimple(trackedIds);
         showAlert('Sparklines unavailable right now — showing prices from the simple endpoint instead.', false);
       }
@@ -310,10 +346,16 @@
       if (grid.querySelector('.coin')) clearAlert();
     } catch (err) {
       grid.setAttribute('aria-busy', 'false');
-      statusEl.textContent = 'Failed';
+
+      // Don't leave skeletons shimmering forever on a failed cold load.
+      if (!grid.querySelector('.coin')) grid.innerHTML = '';
+
+      statusEl.textContent = err.status === 429 ? 'Rate limited' : 'Failed';
       showAlert(
-        'Could not reach CoinGecko. The free API rate-limits heavy use — wait about a minute and refresh. ' +
-        '(Error: ' + err.message + ')',
+        err.status === 429
+          ? 'CoinGecko is rate-limiting this browser (HTTP 429). The free tier allows only a handful ' +
+            'of calls a minute — wait about sixty seconds and hit refresh.'
+          : 'Could not reach CoinGecko. Check your connection and try again. (Error: ' + err.message + ')',
         true
       );
     } finally {

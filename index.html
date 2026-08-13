@@ -4,14 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Rollup Lab — how Arbitrum scales Ethereum</title>
-<meta name="description" content="A hands-on field guide to Ethereum Layer 2: what rollups do, why Arbitrum exists, live crypto prices, and a working proof-of-work block simulator." />
-<meta name="theme-color" content="#070d16" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070d16'/%3E%3Crect x='7' y='7' width='18' height='18' rx='3' fill='none' stroke='%232fb2ff' stroke-width='2.5'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' fill='%232fb2ff'/%3E%3C/svg%3E" />
+<meta name="description" content="A hands-on field guide to Ethereum Layer 2: what rollups do, why Arbitrum exists, live crypto prices, a live Arbitrum Sepolia feed, and a working proof-of-work block simulator." />
+<meta name="theme-color" content="#06070a" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2306070a'/%3E%3Crect x='7' y='7' width='18' height='18' rx='4' fill='none' stroke='%23f2a54c' stroke-width='2'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' rx='1.5' fill='%232ba6ff'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/site.css" />
-<!-- Loaded in <head> so the `js` class is set before first paint (see ui.js) -->
+<!-- Loaded in <head>, not deferred, so the `js` class and the saved theme are
+     applied before first paint. See ui.js. -->
 <script src="assets/js/ui.js"></script>
 </head>
 <body>
@@ -23,7 +24,7 @@
   <div class="wrap nav__inner">
     <a class="brand" href="index.html">
       <span class="brand__mark" aria-hidden="true"></span>
-      Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
+      Rollup Lab <span class="brand__sub">/ L2 field guide</span>
     </a>
 
     <button class="nav__toggle" type="button" data-nav-toggle
@@ -38,8 +39,30 @@
       <a class="nav__link" href="prices.html">Live Prices</a>
       <a class="nav__link" href="simulator.html">Block Simulator</a>
     </nav>
+
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.9 1.9M17.2 17.2l1.9 1.9M19.1 4.9l-1.9 1.9M6.8 17.2l-1.9 1.9"/></svg>
+    </button>
   </div>
 </header>
+
+<!-- ============ The network rail: a real chain, on every page ============ -->
+<div class="rail" id="netRail">
+  <div class="wrap rail__inner">
+    <span class="rail__item">
+      <span class="rail__dot" aria-hidden="true"></span>
+      ARBITRUM SEPOLIA <b id="railStatus">connecting…</b>
+    </span>
+    <span class="rail__sep" aria-hidden="true"></span>
+    <span class="rail__item rail__item--l2">BLOCK <b id="railHeight">—</b></span>
+    <span class="rail__sep" aria-hidden="true"></span>
+    <span class="rail__item">GAS <b id="railGas">—</b></span>
+    <span class="rail__spacer" aria-hidden="true"></span>
+    <button class="wallet-chip" id="walletChip" type="button">Connect wallet</button>
+  </div>
+  <div class="wpanel" id="walletPanel" hidden></div>
+</div>
 
 <main id="main">
 
@@ -48,7 +71,6 @@
     <div class="wrap hero__grid">
       <div>
         <span class="pill"><span class="pill__dot" aria-hidden="true"></span> Arbitrum One · Optimistic rollup</span>
-        <span class="eyebrow">Ethereum / Layer 2 / Arbitrum</span>
         <h1>Ethereum runs out of room.<br /><span>Rollups make more.</span></h1>
         <p class="lede">
           Arbitrum executes transactions off Ethereum, compresses them into batches, and posts the
@@ -75,7 +97,7 @@
   </section>
 
   <!-- ============ Four figures that anchor the rest of the site ============ -->
-  <section class="section" style="padding-top:0; border-top:none;">
+  <section class="section section--tight" style="padding-top:0;">
     <div class="wrap">
       <div class="stats reveal">
         <div class="stat">
@@ -148,7 +170,9 @@
               fraction of the same action on mainnet — and since EIP-4844 gave rollups a cheaper data
               lane (blobs), that gap widened again. Concretely: a payment that isn't worth making at a
               few dollars of mainnet gas becomes worth making at a few cents. That is the difference
-              between a chain used for settlement and a chain people can actually use.
+              between a chain used for settlement and a chain people can actually use. You don't have
+              to take that on trust — the <a href="prices.html#gas">Live Prices page</a> reads both gas
+              prices straight off the two chains and puts them side by side.
             </p>
           </div>
         </article>
@@ -266,8 +290,65 @@
     </div>
   </section>
 
+  <!-- ============ What is actually connected to a chain, and what isn't ============ -->
+  <section class="section section--alt" id="connected">
+    <div class="wrap">
+      <div class="section__head reveal">
+        <span class="eyebrow eyebrow--l1">Under the hood</span>
+        <h2>Which parts of this site touch a real blockchain</h2>
+        <p class="lede">
+          Plenty of sites explain blockchains without ever talking to one. Here is exactly where the
+          line falls on this site, so you can check the claim rather than believe it.
+        </p>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M12 3v18M3 12h18" /><circle cx="12" cy="12" r="9" />
+            </svg>
+          </div>
+          <h3>Real — the network rail</h3>
+          <p>
+            The bar at the top of every page is a live JSON-RPC connection to an Arbitrum Sepolia node.
+            The block height ticking up is that chain advancing. Nothing about it is simulated.
+          </p>
+        </article>
+
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="2.5" y="6" width="19" height="12.5" rx="2.5" /><path d="M16.5 12h2" />
+            </svg>
+          </div>
+          <h3>Real — the wallet</h3>
+          <p>
+            Connect a wallet and the site calls <span class="mono">eth_requestAccounts</span> and
+            <span class="mono">eth_getBalance</span> over EIP-1193. Read-only: it never asks you to
+            sign anything, and it cannot see your private key.
+          </p>
+        </article>
+
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M4 5h16v6H4zM4 13h16v6H4z" /><path d="M7.5 8h.01M7.5 16h.01" />
+            </svg>
+          </div>
+          <h3>Simulated — the mining page</h3>
+          <p>
+            The Block Simulator hashes in your browser with the Web Crypto API. The SHA-256 is real, the
+            chain is not — it is a teaching model with no network or consensus. The page says so, and
+            shows real Arbitrum blocks beside it for comparison.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ Where to go next ============ -->
-  <section class="section section--alt" id="tour">
+  <section class="section" id="tour">
     <div class="wrap">
       <div class="section__head reveal">
         <span class="eyebrow eyebrow--muted">The rest of the site</span>
@@ -280,7 +361,7 @@
         </a>
         <a class="card reveal" href="prices.html">
           <h3>Live Prices →</h3>
-          <p>Real ETH, BTC and ARB prices pulled from the CoinGecko API, with 24-hour movement, 7-day sparklines and on-demand refresh.</p>
+          <p>Real ETH, BTC and ARB prices from the CoinGecko API, plus a live L1-vs-L2 gas comparison read straight off both chains.</p>
         </a>
         <a class="card reveal" href="simulator.html">
           <h3>Block Simulator →</h3>
@@ -296,12 +377,12 @@
 <footer class="footer">
   <div class="wrap footer__inner">
     <div class="footer__meta">
-      <b>Tanmay</b><br />
-      Arbitrum Builder Pods — Batch: <b>tanhaker</b><br />
-      Built for the Lampros DAO assignment, 2026
+      <b>Tanmay Gajjar</b><br />
+      Arbitrum Builder Pods · Lampros DAO<br />
+      Built 2026 · HTML, CSS and JavaScript, no framework
     </div>
     <div class="footer__links">
-      <a href="https://github.com/tanhaker" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/tanhaker/rollup-lab" target="_blank" rel="noopener">Repository</a>
       <a href="concepts.html">Concepts</a>
       <a href="prices.html">Live Prices</a>
       <a href="simulator.html">Block Simulator</a>
@@ -309,6 +390,8 @@
   </div>
 </footer>
 
+<script src="assets/js/chain.js"></script>
+<script src="assets/js/wallet.js"></script>
 <script src="assets/js/batcher.js"></script>
 </body>
 </html>

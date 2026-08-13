@@ -204,6 +204,12 @@
         recomputeChain();
       });
 
+      // On blur, normalise whatever was left in the box back to the real value
+      // (an empty field or "abc" both mean nonce 0).
+      view.nonceInput.addEventListener('blur', () => {
+        view.nonceInput.value = block.nonce;
+      });
+
       view.mineBtn.addEventListener('click', () => mineBlock(i));
 
       view.copyBtn.addEventListener('click', () => copyHash(view, block));
@@ -235,7 +241,13 @@
       '<span class="lead">' + block.hash.slice(0, lead) + '</span>' + block.hash.slice(lead);
     view.hashline.classList.toggle('is-invalid', !valid);
 
-    view.nonceInput.value = block.nonce;
+    // Never write back into a field the user is currently typing in. Doing so
+    // fights the caret: "007" collapses to "7", and clearing the box snaps it
+    // straight back to 0. Mining updates the nonce while the field is blurred,
+    // which is the only time this write actually needs to happen.
+    if (document.activeElement !== view.nonceInput) {
+      view.nonceInput.value = block.nonce;
+    }
   }
 
   function paintAll() {
