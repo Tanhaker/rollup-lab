@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Tests and accessibility audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No `npm install` on purpose. The site has no dependencies, the tests use
+      # Node's built-in runner, and the contrast audit is plain Node — so CI has
+      # nothing to install and nothing that can break from a bad transitive dep.
+
+      - name: Unit tests
+        run: npm test
+
+      - name: WCAG AA contrast audit
+        run: npm run contrast
+
+      - name: Check every page links to the shared assets
+        run: |
+          set -e
+          for page in index.html concepts.html prices.html simulator.html; do
+            for asset in assets/css/site.css assets/js/ui.js assets/js/core.js; do
+              grep -q "$asset" "$page" || { echo "::error file=$page::missing $asset"; exit 1; }
+            done
+          done
+          echo "All four pages reference the shared stylesheet and core scripts."
+
+      - name: Check referenced local files actually exist
+        run: |
+          set -e
+          # Collect every local asset reference from the pages and the README,
+          # then test them in one pass. Note: no pipe into the loop — a `while`
+          # on the right of a pipe runs in a subshell, so a failure flag set
+          # inside it would be discarded and this check would always pass.
+          refs=$(
+            { grep -rhoE '(src|href)="(assets|screenshots)/[^"]+"' ./*.html | sed -E 's/.*"(.*)"/\1/'
+              grep -ohE '\]\((screenshots/[^)]+)\)' README.md | sed -E 's/.*\((.*)\)/\1/'
+            } | sort -u
+          )
+          missing=0
+          for f in $refs; do
+            if [ ! -f "$f" ]; then
+              echo "::error::broken reference: $f"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] && echo "All $(echo "$refs" | wc -l) local references resolve."
+          exit "$missing"

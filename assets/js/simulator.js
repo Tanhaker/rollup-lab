@@ -15,7 +15,7 @@
    ============================================================ */
 
 (function () {
-  const GENESIS_PREV = '0'.repeat(64);
+  const GENESIS_PREV = window.RollupCore.GENESIS_PREV;
   const MIN_BLOCKS = 2;
   const MAX_BLOCKS = 6;
 
@@ -42,6 +42,16 @@
 
   /* ---------- hashing ---------- */
 
+  // Pure helpers come from core.js so they can be unit tested
+  // (see tests/core.test.js). This file keeps the DOM and the mining loop.
+  const C = window.RollupCore;
+  const serialize = C.serializeBlock;
+  const fallbackHex = C.fallbackHex;
+
+  function isValid(block) {
+    return C.meetsDifficulty(block.hash, difficulty);
+  }
+
   async function sha256Hex(text) {
     const bytes = new TextEncoder().encode(text);
     const digest = await window.crypto.subtle.digest('SHA-256', bytes);
@@ -50,36 +60,8 @@
       .join('');
   }
 
-  // Deterministic fallback: four FNV-1a passes with different seeds, concatenated
-  // to 64 hex characters. Not cryptographic — only used when SHA-256 is blocked.
-  function fallbackHex(text) {
-    const seeds = [0x811c9dc5, 0x1000193, 0xdeadbeef, 0xcafebabe];
-    return seeds.map(seed => {
-      let h = seed >>> 0;
-      for (let i = 0; i < text.length; i++) {
-        h ^= text.charCodeAt(i);
-        h = Math.imul(h, 0x01000193) >>> 0;
-      }
-      let out = '';
-      for (let r = 0; r < 4; r++) {
-        h = Math.imul(h ^ (h >>> 15), 0x2545f491) >>> 0;
-        out += h.toString(16).padStart(8, '0');
-      }
-      return out;
-    }).join('').slice(0, 64);
-  }
-
   function hashText(text) {
     return useWebCrypto ? sha256Hex(text) : Promise.resolve(fallbackHex(text));
-  }
-
-  // The exact string a block commits to. Change any part and the hash changes.
-  function serialize(block) {
-    return block.index + '|' + block.data + '|' + block.nonce + '|' + block.prevHash;
-  }
-
-  function isValid(block) {
-    return !!block.hash && block.hash.startsWith('0'.repeat(difficulty));
   }
 
   /* ---------- chain state ---------- */
@@ -335,19 +317,49 @@
     let hash = '';
     const started = performance.now();
 
-    // Brute force. Yield to the browser periodically so the UI stays responsive.
-    while (true) {
-      block.nonce = nonce;
-      hash = await hashText(serialize(block));
-      if (hash.startsWith(target)) break;
-      nonce++;
+    // Brute force, but batched. Awaiting crypto.subtle once per nonce means one
+    // microtask round-trip per attempt, which at difficulty 4 (~65k expected
+    // attempts) is agonising. Hashing BATCH candidates concurrently and then
+    // scanning the results in order is 10-30x faster and still deterministic:
+    // we always take the lowest nonce that satisfies the target, exactly as a
+    // sequential search would.
+    const BATCH = 1024;
+    let found = -1;
 
-      if (nonce % 500 === 0) {
-        view.attempts.textContent = nonce.toLocaleString() + ' attempts';
+    while (found === -1) {
+      const candidates = [];
+      for (let n = nonce; n < nonce + BATCH; n++) {
+        candidates.push(hashText(serialize({
+          index: block.index,
+          data: block.data,
+          nonce: n,
+          prevHash: block.prevHash
+        })));
+      }
+
+      const hashes = await Promise.all(candidates);
+
+      for (let k = 0; k < hashes.length; k++) {
+        if (hashes[k].startsWith(target)) {
+          found = nonce + k;
+          hash = hashes[k];
+          break;
+        }
+      }
+
+      if (found === -1) {
+        nonce += BATCH;
+        // Repaint the counter every few batches rather than every batch — the
+        // text update forces layout, and at difficulty 4 that adds up.
+        if ((nonce / BATCH) % 4 === 0) {
+          view.attempts.textContent = nonce.toLocaleString() + ' attempts';
+        }
+        // Hand the frame back so the page stays alive and interruptible.
         await new Promise(r => setTimeout(r, 0));
       }
     }
 
+    nonce = found;
     block.nonce = nonce;
     block.hash = hash;
 

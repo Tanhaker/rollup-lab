@@ -34,7 +34,7 @@
   --ink:    #f4f6fa;
   --body:   #b9c1cf;
   --muted:  #7f8899;
-  --faint:  #545c6b;
+  --faint:  #768194;   /* WCAG AA: 4.64:1 on the darkest surface */
 
   /* semantic layer colours */
   --l1:      #f2a54c;   /* Ethereum / Layer 1 */
@@ -79,13 +79,13 @@
   --ink:   #0b0e14;
   --body:  #39414f;
   --muted: #626c7d;
-  --faint: #8d95a3;
+  --faint: #636b7b;    /* WCAG AA: 4.60:1 on the lightest surface */
 
-  --l1:      #b96c0d;
+  --l1:      #9d5b0b;
   --l1-soft: rgba(185, 108, 13, 0.10);
-  --l2:      #0071c7;
+  --l2:      #006dc0;
   --l2-soft: rgba(0, 113, 199, 0.10);
-  --ok:      #0f8f5f;
+  --ok:      #0d7a52;
   --ok-soft: rgba(15, 143, 95, 0.10);
   --bad:     #cf2431;
   --bad-soft:rgba(207, 36, 49, 0.10);

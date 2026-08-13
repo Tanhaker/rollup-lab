@@ -97,12 +97,10 @@
     }).format(value);
   }
 
-  // Coin names and symbols come from a third party, so never trust them as markup.
-  function escapeHtml(text) {
-    return String(text === null || text === undefined ? '' : text)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
+  // Coin names and symbols come from a third party, so never trust them as
+  // markup. Escaping and sparkline geometry live in core.js, unit tested.
+  const C = window.RollupCore;
+  const escapeHtml = C.escapeHtml;
 
   function showAlert(message, isError) {
     alertEl.innerHTML =
@@ -118,19 +116,13 @@
   function sparkline(prices, isUp) {
     if (!prices || prices.length < 2) return '';
 
-    // Thin the series so the path stays light (7 days of hourly data is ~168 points)
-    const points = prices.filter((_, i) => i % 3 === 0);
-    const min = Math.min.apply(null, points);
-    const max = Math.max.apply(null, points);
-    const range = max - min || 1;
     const W = 240;
     const H = 42;
 
-    const coords = points.map((p, i) => {
-      const x = (i / (points.length - 1)) * W;
-      const y = H - ((p - min) / range) * (H - 6) - 3;
-      return x.toFixed(1) + ',' + y.toFixed(1);
-    });
+    // Thinned to every 3rd sample (7 days of hourly data is ~168 points) so the
+    // path stays light. Geometry is in core.js and covered by tests.
+    const coords = C.sparklinePoints(prices, W, H, 3);
+    if (!coords.length) return '';
 
     const stroke = isUp ? '#42d392' : '#ff5c6c';
     const fill = isUp ? 'rgba(66,211,146,0.12)' : 'rgba(255,92,108,0.12)';
@@ -224,13 +216,41 @@
 
     coins.forEach(c => { lastPrices[c.id] = c.price; });
 
-    grid.querySelectorAll('[data-remove]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        trackedIds = trackedIds.filter(id => id !== btn.dataset.remove);
-        savePrefs();
-        loadPrices(true);
-      });
-    });
+    // No per-card listeners here on purpose — see the delegated handler in the
+    // wiring section. Re-binding on every render leaked a listener per refresh.
+  }
+
+  /* ---------- short-lived response cache ---------- */
+
+  // A page reload used to spend a fresh CoinGecko call, which on the free tier
+  // is a fast route to HTTP 429. Caching the last good board in sessionStorage
+  // for CACHE_TTL_MS means navigating between pages, or reloading while
+  // tweaking something, costs nothing. Keyed by coin list + currency so a
+  // change to either misses the cache correctly.
+
+  const CACHE_TTL_MS = 45000;
+
+  function cacheKey() {
+    return STORE_KEY + ':cache:' + currency + ':' + trackedIds.slice().sort().join(',');
+  }
+
+  function readCache() {
+    try {
+      const raw = sessionStorage.getItem(cacheKey());
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (!entry || typeof entry.at !== 'number') return null;
+      if (Date.now() - entry.at > CACHE_TTL_MS) return null;
+      return entry.coins;
+    } catch (err) {
+      return null;   // private mode, quota, corrupted value — just skip the cache
+    }
+  }
+
+  function writeCache(coins) {
+    try {
+      sessionStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), coins: coins }));
+    } catch (err) { /* not fatal */ }
   }
 
   /* ---------- data fetching ---------- */
@@ -316,6 +336,16 @@
       return;
     }
 
+    // Serve a warm cache instantly on a cold load rather than spending a call.
+    if (!force && !grid.querySelector('.coin')) {
+      const cached = readCache();
+      if (cached && cached.length) {
+        render(cached);
+        statusEl.textContent = 'Cached · ' + CURRENCIES[currency].code;
+        return;
+      }
+    }
+
     lastFetchAt = now;
     refreshBtn.disabled = true;
     grid.setAttribute('aria-busy', 'true');
@@ -341,6 +371,7 @@
         showAlert('Sparklines unavailable right now — showing prices from the simple endpoint instead.', false);
       }
       render(coins);
+      writeCache(coins);
       statusEl.textContent = 'Updated ' + new Date().toLocaleTimeString() +
                              ' · ' + CURRENCIES[currency].code;
       if (grid.querySelector('.coin')) clearAlert();
@@ -413,6 +444,16 @@
 
   /* ---------- wiring ---------- */
 
+  // One delegated listener for the whole board, attached once. Survives every
+  // re-render, so refreshing can never accumulate duplicate handlers.
+  grid.addEventListener('click', e => {
+    const btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    trackedIds = trackedIds.filter(id => id !== btn.dataset.remove);
+    savePrefs();
+    loadPrices(true);
+  });
+
   refreshBtn.addEventListener('click', () => loadPrices(false));
   addBtn.addEventListener('click', addCoin);
   searchInput.addEventListener('keydown', e => {
@@ -451,5 +492,6 @@
     b.classList.toggle('is-on', b.dataset.cur === currency);
   });
   syncAutoRefresh();
-  loadPrices(true);
+  // Not forced, so a fresh reload within the cache window paints instantly.
+  loadPrices(false);
 })();

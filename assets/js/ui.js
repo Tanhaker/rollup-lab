@@ -143,11 +143,22 @@
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 
-    // A small stagger so a grid of cards arrives in sequence rather than
-    // all at once, which reads as deliberate instead of janky.
+    // A small stagger so a grid of cards arrives in sequence rather than all at
+    // once, which reads as deliberate instead of janky.
     targets.forEach(function (el, i) {
       el.style.transitionDelay = (i % 4) * 60 + 'ms';
       observer.observe(el);
     });
+
+    // Safety net. Reveal-on-scroll means content starts at opacity 0, so if the
+    // observer ever fails to fire — a browser quirk, an odd zoom level, a
+    // restored scroll position — the page would be permanently blank. After
+    // 4 seconds, show anything still hidden. Costs nothing when it isn't needed.
+    setTimeout(function () {
+      document.querySelectorAll('.reveal:not(.is-in)').forEach(function (el) {
+        el.style.transitionDelay = '0ms';
+        el.classList.add('is-in');
+      });
+    }, 4000);
   });
 })();
