@@ -4,13 +4,19 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Live Prices — Rollup Lab</title>
-<meta name="description" content="Live ETH, BTC and ARB prices from the CoinGecko API with 24-hour change and 7-day sparklines." />
+<meta name="description" content="Live ETH, BTC and ARB prices from the CoinGecko API with 24-hour change, 7-day sparklines, currency switching and auto-refresh." />
+<meta name="theme-color" content="#070d16" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070d16'/%3E%3Crect x='7' y='7' width='18' height='18' rx='3' fill='none' stroke='%232fb2ff' stroke-width='2.5'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' fill='%232fb2ff'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://api.coingecko.com" />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/site.css" />
+<script src="assets/js/ui.js"></script>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="nav">
   <div class="wrap nav__inner">
@@ -18,7 +24,14 @@
       <span class="brand__mark" aria-hidden="true"></span>
       Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
     </a>
-    <nav class="nav__links" aria-label="Main">
+
+    <button class="nav__toggle" type="button" data-nav-toggle
+            aria-expanded="false" aria-controls="navLinks">
+      <span class="nav__burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      MENU
+    </button>
+
+    <nav class="nav__links" id="navLinks" aria-label="Main">
       <a class="nav__link" href="index.html">Home</a>
       <a class="nav__link" href="concepts.html">Concepts</a>
       <a class="nav__link is-active" href="prices.html" aria-current="page">Live Prices</a>
@@ -27,15 +40,15 @@
   </div>
 </header>
 
-<main>
+<main id="main">
   <section class="page-head">
     <div class="wrap">
       <span class="eyebrow">Market data / CoinGecko</span>
       <h1>Live prices</h1>
       <p class="lede">
-        Pulled straight from CoinGecko's public API — no key, no backend, no stored data. Each card
-        shows the current USD price, the last 24 hours of movement, and a 7-day trend line. Add any
-        coin CoinGecko lists using the search box.
+        Pulled straight from CoinGecko's public API — no key, no backend, no account. Each card shows
+        the current price, the last 24 hours of movement, and a 7-day trend line. Switch currency, add
+        any coin CoinGecko lists, or let the board refresh itself every 60 seconds.
       </p>
     </div>
   </section>
@@ -43,16 +56,51 @@
   <section class="section" style="padding-top:34px;">
     <div class="wrap">
 
+      <!-- ---------- control strip ---------- -->
       <div class="toolbar">
         <button class="btn" id="refreshBtn" type="button">Refresh prices</button>
-        <input class="field" id="searchInput" type="text" placeholder="Add a coin, e.g. solana" aria-label="Add a coin by name" />
+
+        <div class="seg" id="currencySeg" role="group" aria-label="Display currency">
+          <button type="button" data-cur="usd" class="is-on">USD</button>
+          <button type="button" data-cur="inr">INR</button>
+          <button type="button" data-cur="eur">EUR</button>
+        </div>
+
+        <input class="field" id="searchInput" type="text" placeholder="Add a coin, e.g. polygon" aria-label="Add a coin by name" />
         <button class="btn btn--ghost btn--sm" id="addBtn" type="button">Add coin</button>
+
+        <label class="switch" for="autoRefresh">
+          <input type="checkbox" id="autoRefresh" />
+          Auto-refresh 60s
+        </label>
+
+        <span class="toolbar__spacer"></span>
         <span class="toolbar__status" id="status">Loading…</span>
+      </div>
+
+      <!-- ---------- board-wide totals ---------- -->
+      <div class="stats" id="marketStats" style="margin-bottom:22px;">
+        <div class="stat">
+          <div class="stat__num" id="statCoins">—</div>
+          <span class="stat__label">Coins tracked</span>
+        </div>
+        <div class="stat">
+          <div class="stat__num" id="statCap">—</div>
+          <span class="stat__label">Combined market cap</span>
+        </div>
+        <div class="stat">
+          <div class="stat__num" id="statUp">—</div>
+          <span class="stat__label">Up over 24h</span>
+        </div>
+        <div class="stat">
+          <div class="stat__num" id="statBest">—</div>
+          <span class="stat__label">Best 24h mover</span>
+        </div>
       </div>
 
       <div id="alert"></div>
 
-      <div class="grid grid--auto" id="coinGrid" aria-live="polite">
+      <div class="grid grid--auto" id="coinGrid" aria-live="polite" aria-busy="true">
         <div class="skeleton"></div>
         <div class="skeleton"></div>
         <div class="skeleton"></div>
@@ -60,8 +108,15 @@
       </div>
 
       <p class="link-hint" style="margin-top:24px;">
-        DATA: COINGECKO PUBLIC API · FREE TIER IS RATE-LIMITED, SO REFRESH IS THROTTLED TO ONCE EVERY 10 SECONDS
+        DATA: COINGECKO PUBLIC API · FREE TIER IS RATE-LIMITED, SO MANUAL REFRESH IS THROTTLED TO ONCE
+        EVERY 10 SECONDS · YOUR COIN LIST AND CURRENCY ARE SAVED IN THIS BROWSER ONLY
       </p>
+
+      <noscript>
+        <div class="notice notice--error">
+          This page fetches live prices with JavaScript. Enable JavaScript to see the board.
+        </div>
+      </noscript>
     </div>
   </section>
 </main>

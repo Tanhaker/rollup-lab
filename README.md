@@ -13,13 +13,13 @@ Plain HTML, CSS and JavaScript. No build step, no framework, no dependencies.
 
 | # | File | What it does |
 |---|------|--------------|
-| 1 | `index.html` | Landing page. Hero with an animated rollup batcher (canvas) showing L2 transactions being compressed into a single batch posted to L1, a three-step explainer covering why Ethereum needed Layer 2, what Arbitrum is, and one real benefit over mainnet, plus three feature cards and a footer. |
-| 2 | `concepts.html` | Four side-by-side comparison cards: Web2 vs Web3, Ethereum vs Bitcoin, public key vs private key, blockchain vs traditional database. Each card ends with a "what follows" line — the practical consequence of the difference. |
-| 3 | `prices.html` | Live crypto dashboard using the CoinGecko public API. Shows price in USD, 24h change with a green/red arrow, a 7-day sparkline and market cap for BTC, ETH, ARB and SOL. Manual refresh button (throttled to 10s), plus a search box to add any coin CoinGecko lists. |
-| 4 | `simulator.html` | Three-block proof-of-work simulator using real SHA-256 via the Web Crypto API. Mine each block until its hash starts with N zeros, then edit an earlier block's data and watch every block after it turn invalid. |
+| 1 | `index.html` | Landing page. Hero with an animated rollup batcher (canvas) showing L2 transactions being compressed into a single batch posted to L1, a stat band, a three-step explainer covering why Ethereum needed Layer 2, what Arbitrum is, and one real benefit over mainnet, three feature cards, a four-step transaction lifecycle, and a footer. |
+| 2 | `concepts.html` | Four side-by-side comparison cards: Web2 vs Web3, Ethereum vs Bitcoin, public key vs private key, blockchain vs traditional database. A jump bar links straight to each card, and a recap table closes the page with one line per comparison. |
+| 3 | `prices.html` | Live crypto dashboard using the CoinGecko public API. Price, 24h change with a green/red arrow, a 7-day sparkline and market cap for BTC, ETH, ARB and SOL. USD/INR/EUR switching, manual refresh (throttled to 10s), optional 60-second auto-refresh, a search box to add any coin CoinGecko lists, and board-wide totals. |
+| 4 | `simulator.html` | Proof-of-work simulator using real SHA-256 via the Web Crypto API. Mine each block until its hash starts with N zeros, then edit an earlier block's data and watch every block after it turn invalid. The chain grows from 3 to 6 blocks, and a one-click *Tamper* button demonstrates the cascade. |
 
 All four pages share one navigation bar, one stylesheet, and one visual language. The current
-page is highlighted in the nav.
+page is highlighted in the nav, and on narrow screens the nav collapses into a menu button.
 
 ---
 
@@ -35,8 +35,9 @@ rollup-lab/
 │   ├── css/
 │   │   └── site.css      # single stylesheet shared by all pages
 │   └── js/
+│       ├── ui.js         # shared: mobile nav, sticky header, scroll reveal
 │       ├── batcher.js    # hero canvas animation (home)
-│       ├── prices.js     # CoinGecko fetching, sparklines, search
+│       ├── prices.js     # CoinGecko fetching, sparklines, search, currency
 │       └── simulator.js  # SHA-256 mining and chain validation
 ├── screenshots/          # one screenshot per page
 └── README.md
@@ -49,7 +50,7 @@ rollup-lab/
 Clone the repo and open it. Because everything is static, no install step is required:
 
 ```bash
-git clone https://github.com/REPLACE_WITH_YOUR_USERNAME/rollup-lab.git
+git clone https://github.com/tanhaker/rollup-lab.git
 cd rollup-lab
 ```
 
@@ -70,16 +71,19 @@ it over HTTP is the safer path.
 
 ## How the block simulator works
 
-Each block commits to the string `index|data|nonce|prevHash`, hashed with SHA-256.
+Each block commits to the string `index|data|nonce|prevHash`, hashed with SHA-256. The page
+shows that exact input string under every block, so you can see what changed.
 
 1. `prevHash` of block 1 is 64 zeros (a genesis placeholder); every other block takes the hash
-   of the block above it.
+   of the block above it. The prev-hash field is read-only for that reason — it is derived, not
+   typed.
 2. **Mining** increments the nonce until the resulting hash starts with the required number of
    leading zeros (2 by default, selectable up to 4). There is no shortcut — it is brute force.
+   Each block reports how many attempts it took and the rough hash rate.
 3. A block is **valid** only while its hash still meets that prefix.
 4. Editing any block's data re-hashes that block, which changes the `prevHash` of the next
    block, which changes its hash, and so on down the chain. One edit invalidates everything
-   after it.
+   after it, and the banner at the top names the first broken block.
 
 Each extra required zero multiplies the expected number of attempts by 16, which is why
 difficulty 4 takes noticeably longer than difficulty 2.
@@ -101,8 +105,26 @@ assignment brief, and shows prices without sparklines:
 https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin&vs_currencies=usd&include_24hr_change=true
 ```
 
-No API key is needed. The free tier is rate-limited, so refresh is throttled to once every ten
-seconds and a clear message is shown if CoinGecko returns 429.
+Adding a coin goes through `/search?query=` and takes the top match. No API key is needed. The
+free tier is rate-limited, so manual refresh is throttled to once every ten seconds, auto-refresh
+is capped at one call a minute, polling pauses while the tab is hidden, and a clear message is
+shown if CoinGecko returns 429.
+
+Your tracked coins, chosen currency and auto-refresh preference are stored in `localStorage` —
+in your browser only, never sent anywhere.
+
+---
+
+## Accessibility and responsiveness
+
+- Skip-to-content link on every page, and a visible focus ring throughout.
+- The nav collapses to a labelled menu button under 680px; with JavaScript disabled the links
+  stay visible rather than becoming unreachable.
+- Scroll-reveal animations, the hero animation and the price-flash effect all respect
+  `prefers-reduced-motion`.
+- Live regions announce price updates and the chain verdict to screen readers.
+- Layouts are grid-based and collapse to a single column on phones; the recap table scrolls
+  horizontally inside its own container instead of forcing the page to.
 
 ---
 
@@ -111,14 +133,15 @@ seconds and a clear message is shown if CoinGecko returns 429.
 - **CoinGecko rate limits.** Rapid refreshing or reloading several times in a minute can trigger
   a 429. The page reports this rather than failing silently, but a small cache or a proxy with a
   demo API key would fix it properly.
-- **No persistence.** Coins added via search and mined blocks reset on reload. `localStorage`
-  would be a short addition.
 - **Difficulty 4 blocks the main thread in bursts.** Mining yields to the browser every 500
   attempts to stay responsive; a Web Worker would keep it perfectly smooth.
+- **Mined blocks don't persist.** Coin preferences survive a reload but the chain resets, which
+  is deliberate for a teaching page — still, saving it would be a short addition.
 - **Fallback hash is not cryptographic.** If `crypto.subtle` is unavailable on the origin, the
   simulator uses a deterministic FNV-1a-based hash so the cascade demo still works. The toolbar
   states which engine is active.
-- **Prices are USD only.** A currency selector would be straightforward using `vs_currency`.
+- **Only three currencies.** USD, INR and EUR are wired up; CoinGecko supports many more via the
+  same `vs_currency` parameter.
 - **Next step:** replace the simulated chain with real reads from an Arbitrum Sepolia RPC, so
   Page 4 shows actual block hashes alongside the simulated ones.
 
@@ -126,5 +149,5 @@ seconds and a clear message is shown if CoinGecko returns 429.
 
 ## Author
 
-**Tanmay** — Arbitrum Builder Pods, batch REPLACE_WITH_YOUR_BATCH_NAME
-GitHub: https://github.com/REPLACE_WITH_YOUR_USERNAME
+**Tanmay** — Arbitrum Builder Pods, batch tanhaker
+GitHub: https://github.com/tanhaker
