@@ -5,12 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Concepts — Rollup Lab</title>
 <meta name="description" content="Side-by-side comparisons of Web2 vs Web3, Ethereum vs Bitcoin, public vs private keys, and blockchains vs traditional databases." />
+<meta name="theme-color" content="#070d16" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070d16'/%3E%3Crect x='7' y='7' width='18' height='18' rx='3' fill='none' stroke='%232fb2ff' stroke-width='2.5'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' fill='%232fb2ff'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/site.css" />
+<script src="assets/js/ui.js"></script>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="nav">
   <div class="wrap nav__inner">
@@ -18,7 +23,14 @@
       <span class="brand__mark" aria-hidden="true"></span>
       Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
     </a>
-    <nav class="nav__links" aria-label="Main">
+
+    <button class="nav__toggle" type="button" data-nav-toggle
+            aria-expanded="false" aria-controls="navLinks">
+      <span class="nav__burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      MENU
+    </button>
+
+    <nav class="nav__links" id="navLinks" aria-label="Main">
       <a class="nav__link" href="index.html">Home</a>
       <a class="nav__link is-active" href="concepts.html" aria-current="page">Concepts</a>
       <a class="nav__link" href="prices.html">Live Prices</a>
@@ -27,7 +39,7 @@
   </div>
 </header>
 
-<main>
+<main id="main">
   <section class="page-head">
     <div class="wrap">
       <span class="eyebrow">Reference</span>
@@ -36,6 +48,14 @@
         Nearly every confusing Web3 conversation traces back to one of these four distinctions. Each
         card puts both sides next to each other, then says what actually follows from the difference.
       </p>
+
+      <!-- Jump bar so the page is navigable without scrolling blindly -->
+      <nav class="jump" aria-label="Jump to a comparison">
+        <a href="#web2-web3">01 · Web2 vs Web3</a>
+        <a href="#eth-btc">02 · Ethereum vs Bitcoin</a>
+        <a href="#keys">03 · Public vs private key</a>
+        <a href="#chain-db">04 · Blockchain vs database</a>
+      </nav>
     </div>
   </section>
 
@@ -43,9 +63,9 @@
     <div class="wrap grid" style="gap:22px;">
 
       <!-- 1 -->
-      <article class="compare">
+      <article class="compare reveal" id="web2-web3">
         <div class="compare__head">
-          <h3>Web2 vs Web3</h3>
+          <h3><span class="compare__num">01</span> Web2 vs Web3</h3>
           <span class="compare__tag">Who holds the data</span>
         </div>
         <div class="compare__body">
@@ -76,9 +96,9 @@
       </article>
 
       <!-- 2 -->
-      <article class="compare">
+      <article class="compare reveal" id="eth-btc">
         <div class="compare__head">
-          <h3>Ethereum vs Bitcoin</h3>
+          <h3><span class="compare__num">02</span> Ethereum vs Bitcoin</h3>
           <span class="compare__tag">What the chain is for</span>
         </div>
         <div class="compare__body">
@@ -109,9 +129,9 @@
       </article>
 
       <!-- 3 -->
-      <article class="compare">
+      <article class="compare reveal" id="keys">
         <div class="compare__head">
-          <h3>Public key vs private key</h3>
+          <h3><span class="compare__num">03</span> Public key vs private key</h3>
           <span class="compare__tag">How ownership is proven</span>
         </div>
         <div class="compare__body">
@@ -142,9 +162,9 @@
       </article>
 
       <!-- 4 -->
-      <article class="compare">
+      <article class="compare reveal" id="chain-db">
         <div class="compare__head">
-          <h3>Blockchain vs traditional database</h3>
+          <h3><span class="compare__num">04</span> Blockchain vs traditional database</h3>
           <span class="compare__tag">Who can rewrite history</span>
         </div>
         <div class="compare__body">
@@ -177,17 +197,66 @@
 
     </div>
   </section>
+
+  <!-- ============ One-line recap of all four ============ -->
+  <section class="section section--alt" id="recap">
+    <div class="wrap">
+      <div class="section__head reveal">
+        <span class="eyebrow eyebrow--muted">Recap</span>
+        <h2>If you only remember one line per comparison</h2>
+      </div>
+
+      <div class="table-scroll reveal">
+        <table class="recap">
+          <caption class="visually-hidden">A one-sentence summary of each of the four comparisons</caption>
+          <thead>
+            <tr>
+              <th scope="col">Comparison</th>
+              <th scope="col">The real difference</th>
+              <th scope="col">When it matters</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Web2 vs Web3</td>
+              <td>Whether a company or a keypair decides what your account means.</td>
+              <td>Any time ownership or money is at stake rather than content.</td>
+            </tr>
+            <tr>
+              <td>Ethereum vs Bitcoin</td>
+              <td>Programmable settlement layer vs deliberately minimal sound money.</td>
+              <td>Choosing a base layer to build on — rollups need the programmable kind.</td>
+            </tr>
+            <tr>
+              <td>Public vs private key</td>
+              <td>One verifies signatures in public; the other creates them in secret.</td>
+              <td>Every wallet decision you will ever make, including backups.</td>
+            </tr>
+            <tr>
+              <td>Blockchain vs database</td>
+              <td>Append-only history anyone can re-check vs editable state one owner controls.</td>
+              <td>When silent edits to the record would be worse than the extra cost.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="link-hint" style="margin-top:22px;">
+        NEXT → <a href="simulator.html">PROVE THE LAST ROW YOURSELF ON THE BLOCK SIMULATOR</a>
+      </p>
+    </div>
+  </section>
 </main>
 
 <footer class="footer">
   <div class="wrap footer__inner">
     <div class="footer__meta">
       <b>Tanmay</b><br />
-      Arbitrum Builder Pods — Batch: <b>REPLACE_WITH_YOUR_BATCH_NAME</b><br />
+      Arbitrum Builder Pods — Batch: <b>tanhaker</b><br />
       Built for the Lampros DAO assignment, 2026
     </div>
     <div class="footer__links">
-      <a href="https://github.com/REPLACE_WITH_YOUR_USERNAME" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/tanhaker" target="_blank" rel="noopener">GitHub</a>
       <a href="index.html">Home</a>
       <a href="prices.html">Live Prices</a>
       <a href="simulator.html">Block Simulator</a>

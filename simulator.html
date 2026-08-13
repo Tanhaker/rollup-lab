@@ -5,12 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Block Simulator — Rollup Lab</title>
 <meta name="description" content="Mine real SHA-256 blocks in the browser, then edit an earlier block and watch the rest of the chain break." />
+<meta name="theme-color" content="#070d16" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070d16'/%3E%3Crect x='7' y='7' width='18' height='18' rx='3' fill='none' stroke='%232fb2ff' stroke-width='2.5'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' fill='%232fb2ff'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/site.css" />
+<script src="assets/js/ui.js"></script>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="nav">
   <div class="wrap nav__inner">
@@ -18,7 +23,14 @@
       <span class="brand__mark" aria-hidden="true"></span>
       Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
     </a>
-    <nav class="nav__links" aria-label="Main">
+
+    <button class="nav__toggle" type="button" data-nav-toggle
+            aria-expanded="false" aria-controls="navLinks">
+      <span class="nav__burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      MENU
+    </button>
+
+    <nav class="nav__links" id="navLinks" aria-label="Main">
       <a class="nav__link" href="index.html">Home</a>
       <a class="nav__link" href="concepts.html">Concepts</a>
       <a class="nav__link" href="prices.html">Live Prices</a>
@@ -27,15 +39,16 @@
   </div>
 </header>
 
-<main>
+<main id="main">
   <section class="page-head">
     <div class="wrap">
       <span class="eyebrow">Proof of work / SHA-256</span>
       <h1>Break a chain on purpose</h1>
       <p class="lede">
-        Every block hashes its own data together with the hash of the block before it. Mine all three
-        blocks, then go back and change the data in Block 1. Blocks 2 and 3 turn red instantly — you
-        didn't touch them, but their inputs changed. That cascade is what people mean by immutability.
+        Every block hashes its own data together with the hash of the block before it. Mine the whole
+        chain, then go back and change the data in Block 1. Every block after it turns red instantly —
+        you didn't touch them, but their inputs changed. That cascade is what people mean by
+        immutability.
       </p>
     </div>
   </section>
@@ -43,32 +56,65 @@
   <section class="section" style="padding-top:30px;">
     <div class="wrap">
 
+      <!-- ---------- control strip ---------- -->
       <div class="toolbar">
         <button class="btn" id="mineAllBtn" type="button">Mine whole chain</button>
+        <button class="btn btn--ghost btn--sm" id="tamperBtn" type="button">Tamper with block 1</button>
+        <button class="btn btn--ghost btn--sm" id="addBlockBtn" type="button">+ Add block</button>
+        <button class="btn btn--ghost btn--sm" id="removeBlockBtn" type="button">− Remove last</button>
         <button class="btn btn--ghost btn--sm" id="resetBtn" type="button">Reset chain</button>
+
         <label class="toolbar__status" for="difficulty" style="margin-left:6px;">DIFFICULTY</label>
         <select class="field" id="difficulty" aria-label="Difficulty: number of leading zeros required">
           <option value="2" selected>00 — 2 zeros</option>
           <option value="3">000 — 3 zeros</option>
           <option value="4">0000 — 4 zeros</option>
         </select>
+
+        <span class="toolbar__spacer"></span>
         <span class="toolbar__status" id="engineNote"></span>
+      </div>
+
+      <!-- ---------- chain-wide verdict ---------- -->
+      <div class="verdict" id="verdict" role="status" aria-live="polite">
+        <b>Chain status</b>
+        <span id="verdictText">Nothing mined yet — every block is invalid until it meets the difficulty target.</span>
       </div>
 
       <div class="chain" id="chain"></div>
 
-      <div class="card" style="margin-top:26px;">
-        <h3>What you just did</h3>
-        <p>
-          Mining means brute-forcing the nonce until the block's SHA-256 hash starts with the required
-          number of zeros. There is no shortcut — you try, you check, you try again. Raising the
-          difficulty by one zero multiplies the expected work by 16, which is why the counter jumps so
-          hard between settings. Rewriting history means redoing that work for the tampered block
-          <em>and</em> every block after it, faster than the rest of the network extends the honest
-          chain. On a real network that is economically hopeless, and that is the entire security
-          argument.
-        </p>
+      <div class="grid grid--2" style="margin-top:26px;">
+        <div class="card">
+          <h3>What you just did</h3>
+          <p>
+            Mining means brute-forcing the nonce until the block's SHA-256 hash starts with the required
+            number of zeros. There is no shortcut — you try, you check, you try again. Raising the
+            difficulty by one zero multiplies the expected work by 16, which is why the counter jumps so
+            hard between settings. Rewriting history means redoing that work for the tampered block
+            <em>and</em> every block after it, faster than the rest of the network extends the honest
+            chain. On a real network that is economically hopeless, and that is the entire security
+            argument.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>What each block commits to</h3>
+          <p>
+            Every block hashes the exact string <span class="mono">index|data|nonce|prevHash</span>.
+            Block 1's <span class="mono">prevHash</span> is 64 zeros — a genesis placeholder — and every
+            other block takes the hash of the block above it, which is why the prev-hash field is filled
+            in for you rather than typed. Change a single character anywhere in that string and SHA-256
+            produces a completely unrelated 64-character output, so the block no longer meets its target
+            and neither does anything downstream of it.
+          </p>
+        </div>
       </div>
+
+      <noscript>
+        <div class="notice notice--error" style="margin-top:20px;">
+          The simulator mines and hashes in JavaScript. Enable JavaScript to use this page.
+        </div>
+      </noscript>
 
     </div>
   </section>
@@ -78,11 +124,11 @@
   <div class="wrap footer__inner">
     <div class="footer__meta">
       <b>Tanmay</b><br />
-      Arbitrum Builder Pods — Batch: <b>REPLACE_WITH_YOUR_BATCH_NAME</b><br />
+      Arbitrum Builder Pods — Batch: <b>tanhaker</b><br />
       Built for the Lampros DAO assignment, 2026
     </div>
     <div class="footer__links">
-      <a href="https://github.com/REPLACE_WITH_YOUR_USERNAME" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/tanhaker" target="_blank" rel="noopener">GitHub</a>
       <a href="index.html">Home</a>
       <a href="concepts.html">Concepts</a>
       <a href="prices.html">Live Prices</a>

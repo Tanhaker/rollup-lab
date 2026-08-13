@@ -5,12 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Rollup Lab — how Arbitrum scales Ethereum</title>
 <meta name="description" content="A hands-on field guide to Ethereum Layer 2: what rollups do, why Arbitrum exists, live crypto prices, and a working proof-of-work block simulator." />
+<meta name="theme-color" content="#070d16" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070d16'/%3E%3Crect x='7' y='7' width='18' height='18' rx='3' fill='none' stroke='%232fb2ff' stroke-width='2.5'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' fill='%232fb2ff'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/site.css" />
+<!-- Loaded in <head> so the `js` class is set before first paint (see ui.js) -->
+<script src="assets/js/ui.js"></script>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <!-- ============ Shared navigation (identical on all four pages) ============ -->
 <header class="nav">
@@ -19,7 +25,14 @@
       <span class="brand__mark" aria-hidden="true"></span>
       Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
     </a>
-    <nav class="nav__links" aria-label="Main">
+
+    <button class="nav__toggle" type="button" data-nav-toggle
+            aria-expanded="false" aria-controls="navLinks">
+      <span class="nav__burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      MENU
+    </button>
+
+    <nav class="nav__links" id="navLinks" aria-label="Main">
       <a class="nav__link is-active" href="index.html" aria-current="page">Home</a>
       <a class="nav__link" href="concepts.html">Concepts</a>
       <a class="nav__link" href="prices.html">Live Prices</a>
@@ -28,12 +41,13 @@
   </div>
 </header>
 
-<main>
+<main id="main">
 
   <!-- ============ Hero: the signature element is a live rollup batcher ============ -->
   <section class="hero">
     <div class="wrap hero__grid">
       <div>
+        <span class="pill"><span class="pill__dot" aria-hidden="true"></span> Arbitrum One · Optimistic rollup</span>
         <span class="eyebrow">Ethereum / Layer 2 / Arbitrum</span>
         <h1>Ethereum runs out of room.<br /><span>Rollups make more.</span></h1>
         <p class="lede">
@@ -60,17 +74,41 @@
     </div>
   </section>
 
+  <!-- ============ Four figures that anchor the rest of the site ============ -->
+  <section class="section" style="padding-top:0; border-top:none;">
+    <div class="wrap">
+      <div class="stats reveal">
+        <div class="stat">
+          <div class="stat__num">1</div>
+          <span class="stat__label">L1 posting carries<br />hundreds of L2 txs</span>
+        </div>
+        <div class="stat">
+          <div class="stat__num">~7 days</div>
+          <span class="stat__label">Optimistic challenge<br />window on Arbitrum One</span>
+        </div>
+        <div class="stat">
+          <div class="stat__num">EIP-4844</div>
+          <span class="stat__label">Gave rollups a cheaper<br />blob data lane</span>
+        </div>
+        <div class="stat">
+          <div class="stat__num">16×</div>
+          <span class="stat__label">More work per extra<br />zero of difficulty</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ Required section: why L2, what Arbitrum is, one real benefit ============ -->
   <section class="section" id="why-l2">
     <div class="wrap">
-      <div class="section__head">
+      <div class="section__head reveal">
         <span class="eyebrow">The case for Layer 2</span>
         <h2>Three moves that took Ethereum from congested to affordable</h2>
         <p class="lede">Read these in order — each one only makes sense because of the one before it.</p>
       </div>
 
       <div class="steps">
-        <article class="step">
+        <article class="step reveal">
           <div>
             <h3>Why Ethereum needed Layer 2</h3>
             <p>
@@ -85,7 +123,7 @@
           </div>
         </article>
 
-        <article class="step">
+        <article class="step reveal">
           <div>
             <h3>What Arbitrum is and how it helps</h3>
             <p>
@@ -101,7 +139,7 @@
           </div>
         </article>
 
-        <article class="step">
+        <article class="step reveal">
           <div>
             <h3>One real-world benefit over mainnet</h3>
             <p>
@@ -119,15 +157,15 @@
   </section>
 
   <!-- ============ Features / benefits (3 points with icons) ============ -->
-  <section class="section" id="features">
+  <section class="section section--alt" id="features">
     <div class="wrap">
-      <div class="section__head">
+      <div class="section__head reveal">
         <span class="eyebrow eyebrow--muted">What makes it work</span>
         <h2>Three properties worth understanding</h2>
       </div>
 
       <div class="grid grid--3">
-        <article class="card">
+        <article class="card reveal">
           <div class="card__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
               <rect x="2" y="7" width="8" height="10" rx="1" /><rect x="14" y="7" width="8" height="10" rx="1" />
@@ -142,7 +180,7 @@
           </p>
         </article>
 
-        <article class="card">
+        <article class="card reveal">
           <div class="card__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
               <path d="M12 2.6 20.5 6v6c0 5-3.6 8.2-8.5 9.4C7.1 20.2 3.5 17 3.5 12V6Z" />
@@ -157,7 +195,7 @@
           </p>
         </article>
 
-        <article class="card">
+        <article class="card reveal">
           <div class="card__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
               <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
@@ -175,23 +213,76 @@
     </div>
   </section>
 
-  <!-- ============ Where to go next ============ -->
-  <section class="section" id="tour">
+  <!-- ============ How a transaction actually travels ============ -->
+  <section class="section" id="lifecycle">
     <div class="wrap">
-      <div class="section__head">
+      <div class="section__head reveal">
+        <span class="eyebrow eyebrow--muted">End to end</span>
+        <h2>What happens to one transaction on Arbitrum</h2>
+        <p class="lede">
+          The hero animation above compresses this into a loop. Here it is spelled out, in the order a
+          single transaction experiences it.
+        </p>
+      </div>
+
+      <div class="grid grid--4">
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M12 3v13" /><path d="m7 11 5 5 5-5" /><path d="M4 20h16" />
+            </svg>
+          </div>
+          <h3>1 · Submit</h3>
+          <p>You sign a transaction with your private key and send it to the Arbitrum sequencer instead of the Ethereum mempool.</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M4 6h16v4H4zM4 14h16v4H4z" /><path d="M8 10v4M16 10v4" />
+            </svg>
+          </div>
+          <h3>2 · Order &amp; execute</h3>
+          <p>The sequencer fixes the ordering and runs it through Nitro's EVM. You get a soft confirmation in well under a second.</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M3 12h6l2-4 2 8 2-4h6" />
+            </svg>
+          </div>
+          <h3>3 · Compress &amp; post</h3>
+          <p>Your transaction is bundled with hundreds of others, compressed, and posted to Ethereum — one L1 cost shared by everyone in the batch.</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3.2 2" />
+            </svg>
+          </div>
+          <h3>4 · Settle</h3>
+          <p>The state root is asserted on L1 and becomes final once the challenge window passes with no successful fraud proof.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Where to go next ============ -->
+  <section class="section section--alt" id="tour">
+    <div class="wrap">
+      <div class="section__head reveal">
         <span class="eyebrow eyebrow--muted">The rest of the site</span>
         <h2>Three more pages, one idea each</h2>
       </div>
       <div class="grid grid--3">
-        <a class="card" href="concepts.html">
+        <a class="card reveal" href="concepts.html">
           <h3>Concepts →</h3>
           <p>Web2 vs Web3, Ethereum vs Bitcoin, public vs private keys, and blockchains vs databases — as side-by-side comparisons.</p>
         </a>
-        <a class="card" href="prices.html">
+        <a class="card reveal" href="prices.html">
           <h3>Live Prices →</h3>
           <p>Real ETH, BTC and ARB prices pulled from the CoinGecko API, with 24-hour movement, 7-day sparklines and on-demand refresh.</p>
         </a>
-        <a class="card" href="simulator.html">
+        <a class="card reveal" href="simulator.html">
           <h3>Block Simulator →</h3>
           <p>Mine real SHA-256 blocks in the browser, then edit an early block and watch every block after it break.</p>
         </a>
@@ -206,11 +297,11 @@
   <div class="wrap footer__inner">
     <div class="footer__meta">
       <b>Tanmay</b><br />
-      Arbitrum Builder Pods — Batch: <b>REPLACE_WITH_YOUR_BATCH_NAME</b><br />
+      Arbitrum Builder Pods — Batch: <b>tanhaker</b><br />
       Built for the Lampros DAO assignment, 2026
     </div>
     <div class="footer__links">
-      <a href="https://github.com/REPLACE_WITH_YOUR_USERNAME" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/tanhaker" target="_blank" rel="noopener">GitHub</a>
       <a href="concepts.html">Concepts</a>
       <a href="prices.html">Live Prices</a>
       <a href="simulator.html">Block Simulator</a>
