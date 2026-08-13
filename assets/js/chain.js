@@ -97,42 +97,15 @@
 
   /* ------------------------------------------------------------- helpers */
 
-  // Hex quantity → Number. Safe for block numbers and gas prices, which are
-  // far below Number.MAX_SAFE_INTEGER. Balances use hexToBig instead.
-  function hexToNum(hex) {
-    return hex ? parseInt(hex, 16) : 0;
-  }
-
-  // Hex quantity → BigInt, for wei values that would lose precision as Number.
-  function hexToBig(hex) {
-    return hex ? BigInt(hex) : 0n;
-  }
-
-  // wei (BigInt) → decimal string with `places` digits, no float rounding.
-  function formatUnits(wei, decimals, places) {
-    const base = 10n ** BigInt(decimals);
-    const whole = wei / base;
-    const frac = wei % base;
-    if (places === 0) return whole.toString();
-    const fracStr = frac.toString().padStart(decimals, '0').slice(0, places);
-    return whole.toString() + '.' + fracStr;
-  }
-
-  function formatGwei(wei, places) {
-    return formatUnits(wei, 9, places === undefined ? 3 : places);
-  }
-
-  function shortHash(hash) {
-    if (!hash) return '—';
-    return hash.slice(0, 10) + '…' + hash.slice(-8);
-  }
-
-  function relativeAge(unixSeconds) {
-    const delta = Math.max(0, Math.floor(Date.now() / 1000) - unixSeconds);
-    if (delta < 60) return delta + 's ago';
-    if (delta < 3600) return Math.floor(delta / 60) + 'm ago';
-    return Math.floor(delta / 3600) + 'h ago';
-  }
+  // The pure maths and formatting live in core.js so they can be unit tested
+  // (see tests/core.test.js). This file keeps only the I/O.
+  const C = window.RollupCore;
+  const hexToNum = C.hexToNum;
+  const hexToBig = C.hexToBig;
+  const formatUnits = C.formatUnits;
+  const formatGwei = C.formatGwei;
+  const shortHash = C.shortHash;
+  const relativeAge = C.relativeAge;
 
   /* ------------------------------------------------- 1. the network rail */
 
@@ -280,6 +253,45 @@
 
   /* -------------------------------------------- 3. L1 vs L2 gas comparison */
 
+  // Arbitrum's NodeInterface is a virtual contract: it does not exist on chain,
+  // but the node answers eth_call to this address. It is how you ask Arbitrum
+  // what the L1 data portion of a transaction actually costs.
+  const NODE_INTERFACE = '0x00000000000000000000000000000000000000c8';
+
+  // keccak256("gasEstimateL1Component(address,bool,bytes)")[0:4]
+  const SEL_L1_COMPONENT = '0x77d488a2';
+
+  const TRANSFER_GAS = 21000n;   // a plain ETH transfer, identical on both chains
+
+  // Hand-rolled ABI encoding for gasEstimateL1Component(address,bool,bytes)
+  // with empty calldata. Three head words plus an empty tail:
+  //   [0] destination address, left-padded to 32 bytes
+  //   [1] contractCreation = false
+  //   [2] offset to the bytes argument = 0x60
+  //   [3] length of the bytes argument = 0
+  function encodeL1ComponentCall(to) {
+    const addr = to.replace(/^0x/, '').toLowerCase().padStart(64, '0');
+    const word = function (n) { return n.toString(16).padStart(64, '0'); };
+    return SEL_L1_COMPONENT + addr + word(0) + word(0x60) + word(0);
+  }
+
+  // Returns the L1 data-fee component in *gas units*, or null if unavailable.
+  // Arbitrum charges the L1 posting cost as extra gas at the L2 gas price, so
+  // this number is directly addable to the 21,000 execution gas.
+  async function fetchL1Component() {
+    try {
+      const result = await rpc('arbOne', 'eth_call', [
+        { to: NODE_INTERFACE, data: encodeL1ComponentCall(NODE_INTERFACE) },
+        'latest'
+      ]);
+      if (!result || result.length < 66) return null;
+      // First returned word is uint64 gasEstimateForL1.
+      return hexToBig('0x' + result.slice(2, 66));
+    } catch (err) {
+      return null;   // older node, rate limit, whatever — fall back gracefully
+    }
+  }
+
   function initGas() {
     const l1El = document.getElementById('gasL1');
     const l2El = document.getElementById('gasL2');
@@ -291,57 +303,71 @@
     const l1Cost = document.getElementById('gasL1Cost');
     const l2Cost = document.getElementById('gasL2Cost');
 
-    // A plain ETH transfer costs 21,000 gas on both networks, which makes it
-    // the honest unit for a like-for-like comparison.
-    const TRANSFER_GAS = 21000n;
-
     async function loadGas() {
       // Settled independently so one dead endpoint doesn't blank both sides.
-      const [l1Result, l2Result] = await Promise.allSettled([
-        rpc('mainnet', 'eth_gasPrice'),
-        rpc('arbOne', 'eth_gasPrice')
+      const [l1Result, l2Result, l1Component] = await Promise.all([
+        rpc('mainnet', 'eth_gasPrice').then(function (v) { return v; }, function () { return null; }),
+        rpc('arbOne', 'eth_gasPrice').then(function (v) { return v; }, function () { return null; }),
+        fetchL1Component()
       ]);
 
-      let l1Wei = null;
-      let l2Wei = null;
+      let l1Total = null;   // wei for one transfer on Ethereum
+      let l2Total = null;   // wei for one transfer on Arbitrum, data fee included
 
-      if (l1Result.status === 'fulfilled') {
-        l1Wei = hexToBig(l1Result.value);
-        l1El.textContent = formatGwei(l1Wei, 2) + ' gwei';
-        if (l1Cost) l1Cost.textContent = formatUnits(l1Wei * TRANSFER_GAS, 18, 6) + ' ETH per transfer';
+      if (l1Result !== null) {
+        const wei = hexToBig(l1Result);
+        l1El.textContent = formatGwei(wei, 2) + ' gwei';
+        l1Total = wei * TRANSFER_GAS;
+        if (l1Cost) {
+          l1Cost.textContent = formatUnits(l1Total, 18, 6) + ' ETH for a transfer';
+        }
       } else {
         l1El.textContent = '—';
+        if (l1Cost) l1Cost.textContent = 'endpoint did not answer';
       }
 
-      if (l2Result.status === 'fulfilled') {
-        l2Wei = hexToBig(l2Result.value);
-        l2El.textContent = formatGwei(l2Wei, 3) + ' gwei';
-        if (l2Cost) l2Cost.textContent = formatUnits(l2Wei * TRANSFER_GAS, 18, 8) + ' ETH per transfer';
+      if (l2Result !== null) {
+        const wei = hexToBig(l2Result);
+        l2El.textContent = formatGwei(wei, 3) + ' gwei';
+
+        // The honest number: execution gas plus the L1 data-posting component
+        // that Arbitrum bills at the same L2 gas price. Without this the
+        // comparison flatters Arbitrum, which is the caveat this fixes.
+        const totalGas = l1Component === null ? TRANSFER_GAS : TRANSFER_GAS + l1Component;
+        l2Total = wei * totalGas;
+
+        if (l2Cost) {
+          l2Cost.textContent =
+            formatUnits(l2Total, 18, 8) + ' ETH for a transfer' +
+            (l1Component === null
+              ? ' (execution gas only)'
+              : ' (includes ' + l1Component.toLocaleString() + ' gas of L1 data fee)');
+        }
       } else {
         l2El.textContent = '—';
+        if (l2Cost) l2Cost.textContent = 'endpoint did not answer';
       }
 
-      // Scale both bars against the larger of the two, so the visual ratio is
-      // the real ratio rather than two full-width bars.
-      if (l1Wei !== null && l2Wei !== null && l1Wei > 0n && l2Wei > 0n) {
-        const max = l1Wei > l2Wei ? l1Wei : l2Wei;
-        const pct = function (v) {
-          // integer maths, then a floor of 2% so a tiny bar is still visible
-          return Math.max(2, Number((v * 100n) / max));
-        };
-        if (l1Bar) l1Bar.style.width = pct(l1Wei) + '%';
-        if (l2Bar) l2Bar.style.width = pct(l2Wei) + '%';
+      // Scale both bars against the larger total, so the visual ratio is the
+      // real cost ratio rather than two full-width bars.
+      if (l1Total !== null && l2Total !== null && l1Total > 0n && l2Total > 0n) {
+        const max = l1Total > l2Total ? l1Total : l2Total;
+        const pct = function (v) { return Math.max(2, Number((v * 100n) / max)); };
+        if (l1Bar) l1Bar.style.width = pct(l1Total) + '%';
+        if (l2Bar) l2Bar.style.width = pct(l2Total) + '%';
 
-        const ratio = Number(l1Wei * 100n / l2Wei) / 100;
         if (noteEl) {
-          noteEl.textContent =
-            ratio >= 1
-              ? 'Right now Ethereum gas is about ' + ratio.toFixed(1) +
-                '× the price of Arbitrum gas, read live from both chains.'
-              : 'Ethereum gas is unusually cheap at the moment — the gap narrows when mainnet is quiet.';
+          const ratio = Number((l1Total * 100n) / l2Total) / 100;
+          noteEl.textContent = ratio >= 1
+            ? 'Sending 1 ETH costs about ' + ratio.toFixed(1) + '× more on Ethereum than on ' +
+              'Arbitrum right now' +
+              (l1Component === null
+                ? '. (Arbitrum’s L1 data fee could not be read, so its true cost is slightly higher than shown.)'
+                : ', with Arbitrum’s share of the L1 batch posting already included.')
+            : 'Ethereum gas is unusually cheap at the moment — the gap narrows when mainnet is quiet.';
         }
       } else if (noteEl) {
-        noteEl.textContent = 'One of the two RPC endpoints did not answer. Refresh to try again.';
+        noteEl.textContent = 'One of the RPC endpoints did not answer. Refresh to try again.';
       }
     }
 
@@ -354,12 +380,7 @@
   // wallet.js needs the network table and the formatting helpers.
   window.RollupChain = {
     NETWORKS: NETWORKS,
-    rpc: rpc,
-    hexToNum: hexToNum,
-    hexToBig: hexToBig,
-    formatUnits: formatUnits,
-    formatGwei: formatGwei,
-    shortHash: shortHash
+    rpc: rpc
   };
 
   /* ---------------------------------------------------------------- boot */

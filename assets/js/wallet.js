@@ -48,17 +48,15 @@
 
   /* ------------------------------------------------------------- helpers */
 
-  function shortAddress(address) {
-    return address ? address.slice(0, 6) + '…' + address.slice(-4) : '';
-  }
+  // Formatting comes from core.js (unit tested); this file is pure I/O.
+  const shortAddress = window.RollupCore.shortAddress;
 
   function onTargetChain() {
     return chainIdHex && chainIdHex.toLowerCase() === TARGET.chainIdHex.toLowerCase();
   }
 
   function formatEth(wei) {
-    if (window.RollupChain) return window.RollupChain.formatUnits(wei, 18, 5);
-    return (Number(wei) / 1e18).toFixed(5);
+    return window.RollupCore.formatUnits(wei, 18, 5);
   }
 
   // Wallets reject with 4001 when the user clicks "cancel". That is a normal

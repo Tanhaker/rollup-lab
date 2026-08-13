@@ -1,0 +1,21 @@
+# Local tool / editor state — not project code
+.claude/
+.vscode/
+.idea/
+*.code-workspace
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Dependencies and build output (dev tooling only; the site itself has no build step)
+node_modules/
+coverage/
+.vercel/
+
+# Logs and env
+*.log
+npm-debug.log*
+.env
+.env.local
