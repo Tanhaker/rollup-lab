@@ -4,12 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Block Simulator — Rollup Lab</title>
-<meta name="description" content="Mine real SHA-256 blocks in the browser, then edit an earlier block and watch the rest of the chain break." />
-<meta name="theme-color" content="#070d16" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070d16'/%3E%3Crect x='7' y='7' width='18' height='18' rx='3' fill='none' stroke='%232fb2ff' stroke-width='2.5'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' fill='%232fb2ff'/%3E%3C/svg%3E" />
+<meta name="description" content="Mine real SHA-256 blocks in the browser, then edit an earlier block and watch the rest of the chain break — beside a live feed of real Arbitrum Sepolia blocks." />
+<meta name="theme-color" content="#06070a" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2306070a'/%3E%3Crect x='7' y='7' width='18' height='18' rx='4' fill='none' stroke='%23f2a54c' stroke-width='2'/%3E%3Crect x='12.5' y='12.5' width='7' height='7' rx='1.5' fill='%232ba6ff'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/site.css" />
 <script src="assets/js/ui.js"></script>
 </head>
@@ -21,7 +21,7 @@
   <div class="wrap nav__inner">
     <a class="brand" href="index.html">
       <span class="brand__mark" aria-hidden="true"></span>
-      Rollup Lab <span class="brand__sub">/ L2 FIELD GUIDE</span>
+      Rollup Lab <span class="brand__sub">/ L2 field guide</span>
     </a>
 
     <button class="nav__toggle" type="button" data-nav-toggle
@@ -36,8 +36,29 @@
       <a class="nav__link" href="prices.html">Live Prices</a>
       <a class="nav__link is-active" href="simulator.html" aria-current="page">Block Simulator</a>
     </nav>
+
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch colour theme">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.9 1.9M17.2 17.2l1.9 1.9M19.1 4.9l-1.9 1.9M6.8 17.2l-1.9 1.9"/></svg>
+    </button>
   </div>
 </header>
+
+<div class="rail" id="netRail">
+  <div class="wrap rail__inner">
+    <span class="rail__item">
+      <span class="rail__dot" aria-hidden="true"></span>
+      ARBITRUM SEPOLIA <b id="railStatus">connecting…</b>
+    </span>
+    <span class="rail__sep" aria-hidden="true"></span>
+    <span class="rail__item rail__item--l2">BLOCK <b id="railHeight">—</b></span>
+    <span class="rail__sep" aria-hidden="true"></span>
+    <span class="rail__item">GAS <b id="railGas">—</b></span>
+    <span class="rail__spacer" aria-hidden="true"></span>
+    <button class="wallet-chip" id="walletChip" type="button">Connect wallet</button>
+  </div>
+  <div class="wpanel" id="walletPanel" hidden></div>
+</div>
 
 <main id="main">
   <section class="page-head">
@@ -53,8 +74,41 @@
     </div>
   </section>
 
-  <section class="section" style="padding-top:30px;">
+  <!-- ============ Real blocks, for comparison, before the simulated ones ============ -->
+  <section class="section section--tight">
     <div class="wrap">
+      <div class="section__head reveal" style="margin-bottom:22px;">
+        <span class="eyebrow eyebrow--l1">For comparison · real chain</span>
+        <h2>Actual Arbitrum Sepolia blocks, right now</h2>
+        <p class="lede">
+          These are not simulated. Each row is a real block header fetched with
+          <span class="mono">eth_getBlockByNumber</span> from a public Arbitrum Sepolia node. Note that
+          the hashes look exactly like the ones you are about to mine by hand below — same SHA-256-shaped
+          64 hex characters, produced by the same kind of arithmetic.
+        </p>
+      </div>
+
+      <div class="feed reveal" id="liveFeed" aria-live="polite">
+        <div class="feed__row"><span class="feed__num">—</span><span class="feed__hash">connecting to Arbitrum Sepolia…</span><span class="feed__age"></span></div>
+      </div>
+      <p class="link-hint" id="feedNote" style="text-align:left; margin-top:12px;">
+        CONNECTING…
+      </p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:38px;">
+    <div class="wrap">
+
+      <div class="section__head reveal" style="margin-bottom:22px;">
+        <span class="eyebrow">Your turn · simulated chain</span>
+        <h2>Mine it yourself</h2>
+        <p class="lede">
+          Everything below runs entirely in your browser. The SHA-256 is real — it is the Web Crypto
+          API, the same primitive the chain above uses. The chain is not: there are no peers, no
+          consensus and no network here, only the hashing and linking rules that make tampering visible.
+        </p>
+      </div>
 
       <!-- ---------- control strip ---------- -->
       <div class="toolbar">
@@ -110,6 +164,14 @@
         </div>
       </div>
 
+      <div class="notice notice--warn" style="margin-top:22px;">
+        <b>Where the analogy stops.</b> Arbitrum does not use proof of work — Ethereum moved to
+        proof of stake, and a rollup inherits that security rather than mining its own. What carries
+        over exactly is the part this page demonstrates: blocks committing to the hash of their
+        predecessor, so history cannot be edited quietly. The consensus mechanism differs; the
+        hash-linking does not.
+      </div>
+
       <noscript>
         <div class="notice notice--error" style="margin-top:20px;">
           The simulator mines and hashes in JavaScript. Enable JavaScript to use this page.
@@ -123,12 +185,12 @@
 <footer class="footer">
   <div class="wrap footer__inner">
     <div class="footer__meta">
-      <b>Tanmay</b><br />
-      Arbitrum Builder Pods — Batch: <b>tanhaker</b><br />
-      Built for the Lampros DAO assignment, 2026
+      <b>Tanmay Gajjar</b><br />
+      Arbitrum Builder Pods · Lampros DAO<br />
+      Built 2026 · HTML, CSS and JavaScript, no framework
     </div>
     <div class="footer__links">
-      <a href="https://github.com/tanhaker" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/tanhaker/rollup-lab" target="_blank" rel="noopener">Repository</a>
       <a href="index.html">Home</a>
       <a href="concepts.html">Concepts</a>
       <a href="prices.html">Live Prices</a>
@@ -136,6 +198,8 @@
   </div>
 </footer>
 
+<script src="assets/js/chain.js"></script>
+<script src="assets/js/wallet.js"></script>
 <script src="assets/js/simulator.js"></script>
 </body>
 </html>

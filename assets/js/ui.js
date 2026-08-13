@@ -1,19 +1,54 @@
-/* ============================================================
+/* ============================================================================
    ui.js — shared behaviour for all four pages.
 
-   Loaded from <head> (not deferred) so the `js` class lands on <html>
-   before first paint. Without that class the reveal animation never
-   hides anything, which keeps the site fully readable with JS off.
+   Loaded from <head> and NOT deferred, on purpose. Two things have to happen
+   before the first paint:
+     · the `js` class lands on <html>, so the reveal animation can hide things
+       (without it the site stays fully readable with JavaScript off)
+     · the saved theme is applied, so a light-theme visitor doesn't get a dark
+       flash on every navigation
+
+   Everything else waits for DOMContentLoaded.
 
    Responsibilities:
      1. mark the document as JS-capable
-     2. mobile navigation toggle
-     3. "scrolled" state on the sticky header
-     4. scroll-reveal for sections
-   ============================================================ */
+     2. apply the saved colour theme before paint, and wire the toggle
+     3. mobile navigation
+     4. "scrolled" state on the sticky header
+     5. scroll-reveal for sections
+   ============================================================================ */
 
 (function () {
+  'use strict';
+
+  const THEME_KEY = 'rollup-lab:theme';
+
   document.documentElement.classList.add('js');
+
+  /* ------------------------------------- theme, applied before first paint */
+
+  // Dark is this site's default, not just its dark mode — the whole palette is
+  // built around a deep background. A visitor who has never touched the toggle
+  // gets dark regardless of their OS setting; light is opt-in and remembered.
+  function preferredTheme() {
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch (err) { /* private mode — fall through to the default */ }
+
+    return 'dark';
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    // batcher.js listens for this so the canvas re-reads its palette.
+    window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: theme } }));
+  }
+
+  // Runs immediately, not on DOMContentLoaded — that is the whole point.
+  applyTheme(preferredTheme());
+
+  /* ------------------------------------------------------------ the rest */
 
   function onReady(fn) {
     if (document.readyState !== 'loading') fn();
@@ -21,6 +56,24 @@
   }
 
   onReady(function () {
+    /* ---------- theme toggle ---------- */
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+      const sync = function () {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        themeBtn.setAttribute('aria-label', isLight ? 'Switch to dark theme' : 'Switch to light theme');
+        themeBtn.setAttribute('aria-pressed', String(isLight));
+      };
+      sync();
+
+      themeBtn.addEventListener('click', function () {
+        const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        applyTheme(next);
+        sync();
+        try { localStorage.setItem(THEME_KEY, next); } catch (err) { /* not fatal */ }
+      });
+    }
+
     /* ---------- mobile navigation ---------- */
     const toggle = document.querySelector('[data-nav-toggle]');
     const links = document.getElementById('navLinks');
@@ -39,9 +92,18 @@
         }
       });
 
+      // Escape closes it too, which keyboard users will expect.
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && links.classList.contains('is-open')) {
+          links.classList.remove('is-open');
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.focus();
+        }
+      });
+
       // Leaving the mobile breakpoint should never strand the menu in a
       // half-open state, so reset it whenever the query stops matching.
-      const mq = window.matchMedia('(max-width: 680px)');
+      const mq = window.matchMedia('(max-width: 820px)');
       const reset = function () {
         if (!mq.matches) {
           links.classList.remove('is-open');
@@ -81,6 +143,11 @@
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 
-    targets.forEach(function (el) { observer.observe(el); });
+    // A small stagger so a grid of cards arrives in sequence rather than
+    // all at once, which reads as deliberate instead of janky.
+    targets.forEach(function (el, i) {
+      el.style.transitionDelay = (i % 4) * 60 + 'ms';
+      observer.observe(el);
+    });
   });
 })();
